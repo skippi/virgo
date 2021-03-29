@@ -1,9 +1,9 @@
 import sys
-import boto3
+import aioboto3
 from botocore.config import Config
 from discord.ext import commands
 
-AWS = boto3.client("ec2", config=Config(region_name="us-east-2"))
+AWS_CONFIG = Config(region_name="us-east-2")
 BOT = commands.Bot(command_prefix="v!")
 
 
@@ -27,13 +27,14 @@ async def game_group(ctx: commands.Context) -> None:
 @game_group.command(name="create")
 async def game_create_command(_: commands.Context, name: str) -> None:
     """Create a new game instance."""
-    runInstanceResult = AWS.run_instances(
-        ImageId=name, InstanceType="t4g.micro", MinCount=1, MaxCount=1
-    )
-    AWS.create_tags(
-        Resources=[i["InstanceId"] for i in runInstanceResult["Instances"]],
-        Tags=[{"Key": "virgo:id", "Value": "foo"}],
-    )
+    async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
+        runInstanceResult = await ec2.run_instances(
+            ImageId=name, InstanceType="t4g.micro", MinCount=1, MaxCount=1
+        )
+        await ec2.create_tags(
+            Resources=[i["InstanceId"] for i in runInstanceResult["Instances"]],
+            Tags=[{"Key": "virgo:id", "Value": "foo"}],
+        )
 
 
 @BOT.command(name="kill")
