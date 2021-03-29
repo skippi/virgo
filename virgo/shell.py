@@ -1,6 +1,9 @@
 import sys
+import boto3
+from botocore.config import Config
 from discord.ext import commands
 
+AWS = boto3.client("ec2", config=Config(region_name="us-east-2"))
 BOT = commands.Bot(command_prefix="v!")
 
 
@@ -12,9 +15,15 @@ async def game_group(ctx: commands.Context) -> None:
 
 
 @game_group.command(name="create")
-async def game_create_command(ctx: commands.Context) -> None:
+async def game_create_command(ctx: commands.Context, name: str) -> None:
     """Create a new game instance."""
-    await ctx.send("hello world")
+    runInstanceResult = AWS.run_instances(
+        ImageId=name, InstanceType="t4g.micro", MinCount=1, MaxCount=1
+    )
+    AWS.create_tags(
+        Resources=[i["InstanceId"] for i in runInstanceResult["Instances"]],
+        Tags=[{"Key": "virgo:id", "Value": "foo"}],
+    )
 
 
 @BOT.command(name="kill")
