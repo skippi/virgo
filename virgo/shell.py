@@ -7,6 +7,16 @@ AWS = boto3.client("ec2", config=Config(region_name="us-east-2"))
 BOT = commands.Bot(command_prefix="v!")
 
 
+@BOT.event
+async def on_command_completion(ctx: commands.Context) -> None:
+    await ctx.message.add_reaction("✅")
+
+
+@BOT.event
+async def on_command_error(ctx: commands.Context, exception: Exception) -> None:
+    await ctx.message.add_reaction("❌")
+
+
 @BOT.group(name="game")
 async def game_group(ctx: commands.Context) -> None:
     """Manage game instances."""
