@@ -13,7 +13,7 @@ async def on_command_completion(ctx: commands.Context) -> None:
 
 
 @BOT.event
-async def on_command_error(ctx: commands.Context, exception: Exception) -> None:
+async def on_command_error(ctx: commands.Context, _: Exception) -> None:
     await ctx.message.add_reaction("❌")
 
 
@@ -25,7 +25,7 @@ async def game_group(ctx: commands.Context) -> None:
 
 
 @game_group.command(name="create")
-async def game_create_command(ctx: commands.Context, name: str) -> None:
+async def game_create_command(_: commands.Context, name: str) -> None:
     """Create a new game instance."""
     runInstanceResult = AWS.run_instances(
         ImageId=name, InstanceType="t4g.micro", MinCount=1, MaxCount=1
