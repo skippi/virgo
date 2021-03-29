@@ -17,6 +17,13 @@ async def game_create_command(ctx: commands.Context) -> None:
     await ctx.send("hello world")
 
 
+@BOT.command(name="kill")
+@commands.has_permissions(administrator=True)
+async def kill_command(_: commands.Context) -> None:
+    """Kill virgo bot."""
+    await BOT.logout()
+
+
 def main():
     token = sys.argv[1]
     BOT.run(token)
