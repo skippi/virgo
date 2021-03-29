@@ -1,14 +1,18 @@
 [tool.poetry]
-name = "taurus"
+name = "virgo"
 version = "0.1.0"
 description = ""
 authors = ["skippi <jbtcao@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
+discord = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+
+[tool.poetry.scripts]
+virgo = 'virgo.shell:main'
 
 [build-system]
 requires = ["poetry>=0.12"]
