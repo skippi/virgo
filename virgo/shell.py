@@ -63,6 +63,15 @@ def _instance_get_game(instance) -> str:
     return next((t["Value"] for t in instance["Tags"] if t["Key"] == "virgo:game"), "")
 
 
+@game_group.command(name="kill")
+async def game_kill_command(_: commands.Context, *instanceIds) -> None:
+    """Kill a game instance."""
+    if not instanceIds:
+        return
+    async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
+        await ec2.terminate_instances(InstanceIds=instanceIds)
+
+
 @BOT.command(name="exit")
 @commands.has_permissions(administrator=True)
 async def exit_command(_: commands.Context) -> None:
