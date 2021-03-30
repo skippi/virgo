@@ -15,6 +15,7 @@ async def on_command_completion(ctx: commands.Context) -> None:
 @BOT.event
 async def on_command_error(ctx: commands.Context, _: Exception) -> None:
     await ctx.message.add_reaction("❌")
+    await ctx.send_help()
 
 
 @BOT.group(name="game")
