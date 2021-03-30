@@ -37,10 +37,10 @@ async def game_create_command(_: commands.Context, name: str) -> None:
         )
 
 
-@BOT.command(name="kill")
+@BOT.command(name="exit")
 @commands.has_permissions(administrator=True)
-async def kill_command(_: commands.Context) -> None:
-    """Kill virgo bot."""
+async def exit_command(_: commands.Context) -> None:
+    """Exit virgo bot."""
     await BOT.logout()
 
 
