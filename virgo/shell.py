@@ -33,8 +33,34 @@ async def game_create_command(_: commands.Context, name: str) -> None:
         )
         await ec2.create_tags(
             Resources=[i["InstanceId"] for i in runInstanceResult["Instances"]],
-            Tags=[{"Key": "virgo:id", "Value": "foo"}],
+            Tags=[{"Key": "virgo:game", "Value": name}],
         )
+
+
+@game_group.command(name="list")
+async def game_list_command(ctx: commands.Context) -> None:
+    """List game instances."""
+    async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
+        instancesResult = await ec2.describe_instances(
+            Filters=[
+                {"Name": "instance-state-name", "Values": ["pending", "running"]},
+                {"Name": "tag:virgo:game", "Values": ["*"]},
+            ]
+        )
+        instances = [i for r in instancesResult["Reservations"] for i in r["Instances"]]
+        msg = "\n".join(map(_instance_format_for_listing, instances))
+        if msg:
+            await ctx.send(msg)
+
+
+def _instance_format_for_listing(instance) -> str:
+    _id = instance["InstanceId"]
+    ip_addr = instance.get("PublicIpAddress", "pending")
+    return f"{_instance_get_game(instance)}-{_id}: {ip_addr}"
+
+
+def _instance_get_game(instance) -> str:
+    return next((t["Value"] for t in instance["Tags"] if t["Key"] == "virgo:game"), "")
 
 
 @BOT.command(name="exit")
