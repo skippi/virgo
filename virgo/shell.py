@@ -29,11 +29,11 @@ async def game_group(ctx: commands.Context) -> None:
 async def game_create_command(_: commands.Context, name: str) -> None:
     """Create a new game instance."""
     async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
-        runInstanceResult = await ec2.run_instances(
+        response = await ec2.run_instances(
             ImageId=name, InstanceType="t4g.micro", MinCount=1, MaxCount=1
         )
         await ec2.create_tags(
-            Resources=[i["InstanceId"] for i in runInstanceResult["Instances"]],
+            Resources=[i["InstanceId"] for i in response["Instances"]],
             Tags=[{"Key": "virgo:game", "Value": name}],
         )
 
@@ -42,13 +42,13 @@ async def game_create_command(_: commands.Context, name: str) -> None:
 async def game_list_command(ctx: commands.Context) -> None:
     """List game instances."""
     async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
-        instancesResult = await ec2.describe_instances(
+        response = await ec2.describe_instances(
             Filters=[
                 {"Name": "instance-state-name", "Values": ["pending", "running"]},
                 {"Name": "tag:virgo:game", "Values": ["*"]},
             ]
         )
-        instances = [i for r in instancesResult["Reservations"] for i in r["Instances"]]
+        instances = [i for r in response["Reservations"] for i in r["Instances"]]
         msg = "\n".join(map(_instance_format_for_listing, instances))
         if msg:
             await ctx.send(msg)
@@ -65,12 +65,12 @@ def _instance_get_game(instance) -> str:
 
 
 @game_group.command(name="kill")
-async def game_kill_command(_: commands.Context, *instanceIds) -> None:
+async def game_kill_command(_: commands.Context, *ids) -> None:
     """Kill a game instance."""
-    if not instanceIds:
+    if not ids:
         return
     async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
-        await ec2.terminate_instances(InstanceIds=instanceIds)
+        await ec2.terminate_instances(InstanceIds=ids)
 
 
 @BOT.command(name="exit")
