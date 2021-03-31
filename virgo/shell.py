@@ -65,6 +65,7 @@ def _instance_get_game(instance) -> str:
 
 
 @game_group.command(name="kill")
+@commands.has_permissions(administrator=True)
 async def game_kill_command(_: commands.Context, *ids) -> None:
     """Kill a game instance."""
     if not ids:
@@ -74,6 +75,7 @@ async def game_kill_command(_: commands.Context, *ids) -> None:
 
 
 @game_group.command(name="clear")
+@commands.has_permissions(administrator=True)
 async def game_clear_command(_: commands.Context) -> None:
     """Clear a game instance."""
     async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
