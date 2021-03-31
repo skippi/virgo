@@ -73,6 +73,20 @@ async def game_kill_command(_: commands.Context, *ids) -> None:
         await ec2.terminate_instances(InstanceIds=ids)
 
 
+@game_group.command(name="clear")
+async def game_clear_command(_: commands.Context) -> None:
+    """Clear a game instance."""
+    async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
+        res = await ec2.describe_instances(
+            Filters=[
+                {"Name": "instance-state-name", "Values": ["pending", "running"]},
+                {"Name": "tag:virgo:game", "Values": ["*"]},
+            ]
+        )
+        ids = [i["InstanceId"] for r in res["Reservations"] for i in r["Instances"]]
+        await ec2.terminate_instances(InstanceIds=ids)
+
+
 @BOT.command(name="exit")
 @commands.has_permissions(administrator=True)
 async def exit_command(_: commands.Context) -> None:
