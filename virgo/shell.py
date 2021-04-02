@@ -76,12 +76,19 @@ def _instance_get_game(instance) -> str:
 
 @game_group.command(name="kill")
 @commands.has_permissions(administrator=True)
-async def game_kill_command(_: commands.Context, *ids) -> None:
+async def game_kill_command(ctx: commands.Context, *ids) -> None:
     """Kill a game instance."""
     if not ids:
         return
     async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
-        await ec2.terminate_instances(InstanceIds=ids)
+        try:
+            await ec2.terminate_instances(InstanceIds=ids)
+        except ClientError as e:
+            code = e.response["Error"]["Code"]
+            if code == "InvalidInstanceID.Malformed":
+                await ctx.send(f"virgo: instance with one of id(s) `{list(ids)}` does not exist")
+            else:
+                await ctx.send(f"virgo: unknown error {code}")
 
 
 @game_group.command(name="clear")
