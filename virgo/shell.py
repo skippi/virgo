@@ -1,5 +1,6 @@
 import sys
 import aioboto3
+from botocore.exceptions import ClientError
 from botocore.config import Config
 from discord.ext import commands
 
@@ -26,19 +27,26 @@ async def game_group(ctx: commands.Context) -> None:
 
 
 @game_group.command(name="create")
-async def game_create_command(_: commands.Context, name: str) -> None:
+async def game_create_command(ctx: commands.Context, name: str) -> None:
     """Create a new game instance."""
     async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
-        response = await ec2.run_instances(
-            LaunchTemplate={"LaunchTemplateName": name},
-            InstanceType="t4g.micro",
-            MinCount=1,
-            MaxCount=1,
-        )
-        await ec2.create_tags(
-            Resources=[i["InstanceId"] for i in response["Instances"]],
-            Tags=[{"Key": "virgo:game", "Value": name}],
-        )
+        try:
+            response = await ec2.run_instances(
+                LaunchTemplate={"LaunchTemplateName": name},
+                InstanceType="t4g.micro",
+                MinCount=1,
+                MaxCount=1,
+            )
+            await ec2.create_tags(
+                Resources=[i["InstanceId"] for i in response["Instances"]],
+                Tags=[{"Key": "virgo:game", "Value": name}],
+            )
+        except ClientError as e:
+            code = e.response["Error"]["Code"]
+            if code == "InvalidLaunchTemplateName.NotFound":
+                await ctx.send(f"virgo: game `{name}` does not exist")
+            else:
+                await ctx.send(f"virgo: unknown error {code}")
 
 
 @game_group.command(name="list")
