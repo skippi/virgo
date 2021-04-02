@@ -30,7 +30,10 @@ async def game_create_command(_: commands.Context, name: str) -> None:
     """Create a new game instance."""
     async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
         response = await ec2.run_instances(
-            ImageId=name, InstanceType="t4g.micro", MinCount=1, MaxCount=1
+            LaunchTemplate={"LaunchTemplateName": name},
+            InstanceType="t4g.micro",
+            MinCount=1,
+            MaxCount=1,
         )
         await ec2.create_tags(
             Resources=[i["InstanceId"] for i in response["Instances"]],
