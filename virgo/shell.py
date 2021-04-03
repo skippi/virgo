@@ -43,9 +43,9 @@ async def game_create_command(ctx: commands.Context, name: str) -> None:
         except ClientError as e:
             code = e.response["Error"]["Code"]
             if code == "InvalidLaunchTemplateName.NotFound":
-                await ctx.send(f"virgo: game `{name}` does not exist")
+                await ctx.send(f"```virgo: game `{name}` does not exist```")
             else:
-                await ctx.send(f"virgo: unknown error {str(e)}")
+                await ctx.send(f"```virgo: unknown error {str(e)}```")
 
 
 @game_group.command(name="list")
@@ -61,7 +61,7 @@ async def game_list_command(ctx: commands.Context) -> None:
         instances = [i for r in response["Reservations"] for i in r["Instances"]]
         msg = "\n".join(map(_instance_format_for_listing, instances))
         if msg:
-            await ctx.send(msg)
+            await ctx.send(f"```{msg}```")
 
 
 def _instance_format_for_listing(instance) -> str:
@@ -87,10 +87,10 @@ async def game_kill_command(ctx: commands.Context, *ids) -> None:
             code = e.response["Error"]["Code"]
             if code == "InvalidInstanceID.Malformed":
                 await ctx.send(
-                    f"virgo: instance with one of id(s) `{list(ids)}` does not exist"
+                    f"```virgo: instance with one of id(s) `{list(ids)}` does not exist```"
                 )
             else:
-                await ctx.send(f"virgo: unknown error {str(e)}")
+                await ctx.send(f"```virgo: unknown error {str(e)}```")
 
 
 @game_group.command(name="clear")
