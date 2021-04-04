@@ -32,7 +32,6 @@ async def game_create_command(ctx: commands.Context, name: str) -> None:
         try:
             response = await ec2.run_instances(
                 LaunchTemplate={"LaunchTemplateName": name},
-                InstanceType="t4g.micro",
                 MinCount=1,
                 MaxCount=1,
             )
