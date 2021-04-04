@@ -10,7 +10,7 @@ ENV PYTHONFAULTHANDLER=1 \
   POETRY_VIRTUALENVS_CREATE=false \
   POETRY_VERSION=1.1.5
 
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update && apt-get install -y build-essential curl
 RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
 RUN ln -s ~/.poetry/bin/poetry /usr/local/bin/poetry
 
@@ -18,7 +18,6 @@ WORKDIR /app
 COPY poetry.lock pyproject.toml /app/
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-interaction --no-dev
-RUN poetry shell
 COPY . /app
 
 CMD poetry run virgo $VIRGO_TOKEN
