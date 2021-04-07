@@ -8,6 +8,11 @@ AWS_CONFIG = Config(region_name="us-east-2")
 BOT = commands.Bot(command_prefix="v!")
 
 
+class InvalidModeError(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+
+
 @BOT.event
 async def on_command_completion(ctx: commands.Context) -> None:
     await ctx.message.add_reaction("✅")
@@ -16,7 +21,10 @@ async def on_command_completion(ctx: commands.Context) -> None:
 @BOT.event
 async def on_command_error(ctx: commands.Context, e: Exception) -> None:
     await ctx.message.add_reaction("❌")
-    await ctx.send(f"```{e}```")
+    if isinstance(e, commands.CommandInvokeError):
+        await ctx.send(f"```virgo: {e.original}```")
+    else:
+        await ctx.send(f"```virgo: {e}```")
 
 
 @BOT.group(name="game")
@@ -31,10 +39,14 @@ async def game_create_command(ctx: commands.Context, name: str) -> None:
     """Create a new game instance."""
     async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
         try:
+            tmp_check = await ec2.describe_launch_templates(
+                LaunchTemplateNames=[name],
+                Filters=[{"Name": "tag:virgo:game", "Values": ["*"]},],
+            )
+            if not tmp_check["LaunchTemplates"]:
+                raise InvalidModeError(f"`{name}` is not a virgo game mode")
             response = await ec2.run_instances(
-                LaunchTemplate={"LaunchTemplateName": name},
-                MinCount=1,
-                MaxCount=1,
+                LaunchTemplate={"LaunchTemplateName": name}, MinCount=1, MaxCount=1,
             )
             await ec2.create_tags(
                 Resources=[i["InstanceId"] for i in response["Instances"]],
