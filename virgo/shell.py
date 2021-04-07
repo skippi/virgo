@@ -7,8 +7,19 @@ from discord.ext import commands
 AWS_CONFIG = Config(region_name="us-east-2")
 BOT = commands.Bot(command_prefix="v!")
 
+class InvalidGameError(Exception):
+    pass
+
 
 class InvalidModeError(Exception):
+    pass
+
+
+class ModeNotFoundError(Exception):
+    pass
+
+
+class UnknownError(Exception):
     pass
 
 
@@ -21,9 +32,10 @@ async def on_command_completion(ctx: commands.Context) -> None:
 async def on_command_error(ctx: commands.Context, e: Exception) -> None:
     await ctx.message.add_reaction("❌")
     if isinstance(e, commands.CommandInvokeError):
-        await ctx.send(f"```virgo: {e.original}```")
+        orig = e.original
+        await ctx.send(f"```virgo: ({type(orig).__name__}) {orig}```")
     else:
-        await ctx.send(f"```virgo: {e}```")
+        await ctx.send(f"```virgo: ({type(e).__name__}) {e}```")
 
 
 @BOT.group(name="game")
@@ -53,10 +65,13 @@ async def game_create_command(ctx: commands.Context, name: str) -> None:
             )
         except ClientError as e:
             code = e.response["Error"]["Code"]
-            if code == "InvalidLaunchTemplateName.NotFound":
-                await ctx.send(f"```virgo: game `{name}` does not exist```")
+            if code in [
+                "InvalidLaunchTemplateName.NotFound",
+                "InvalidLaunchTemplateName.NotFoundException",
+            ]:
+                raise ModeNotFoundError(f"mode `{name}` does not exist")
             else:
-                await ctx.send(f"```virgo: unknown error {str(e)}```")
+                raise UnknownError(str(e))
 
 
 @game_group.command(name="list")
@@ -128,11 +143,9 @@ async def game_kill_command(ctx: commands.Context, *ids) -> None:
         except ClientError as e:
             code = e.response["Error"]["Code"]
             if code == "InvalidInstanceID.Malformed":
-                await ctx.send(
-                    f"```virgo: instance with one of id(s) `{list(ids)}` does not exist```"
-                )
+                raise UnknownError(f"one of instance id(s) {list(ids)} does not exist")
             else:
-                await ctx.send(f"```virgo: unknown error {str(e)}```")
+                raise UnknownError(str(e))
 
 
 @game_group.command(name="clear")
