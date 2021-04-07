@@ -74,6 +74,25 @@ def _instance_get_game(instance) -> str:
     return next((t["Value"] for t in instance["Tags"] if t["Key"] == "virgo:game"), "")
 
 
+@BOT.group(name="mode")
+async def mode_group(ctx: commands.Context) -> None:
+    """Manage game modes."""
+    if not ctx.invoked_subcommand:
+        await ctx.send_help(mode_group)
+
+
+@mode_group.command(name="list")
+async def mode_list_command(ctx: commands.Context) -> None:
+    """List game modes."""
+    async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
+        response = await ec2.describe_launch_templates(
+            Filters=[{"Name": "tag:virgo:game", "Values": ["*"]},]
+        )
+        msg = "\n".join(t["LaunchTemplateName"] for t in response["LaunchTemplates"])
+        if msg:
+            await ctx.send(f"```{msg}```")
+
+
 @game_group.command(name="kill")
 @commands.has_permissions(administrator=True)
 async def game_kill_command(ctx: commands.Context, *ids) -> None:
