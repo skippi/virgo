@@ -1,5 +1,5 @@
-import sys
 import aioboto3
+import sys
 from botocore.exceptions import ClientError
 from botocore.config import Config
 from discord.ext import commands
@@ -9,8 +9,7 @@ BOT = commands.Bot(command_prefix="v!")
 
 
 class InvalidModeError(Exception):
-    def __init__(self, msg):
-        super().__init__(msg)
+    pass
 
 
 @BOT.event
@@ -66,20 +65,32 @@ async def game_list_command(ctx: commands.Context) -> None:
     async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
         response = await ec2.describe_instances(
             Filters=[
-                {"Name": "instance-state-name", "Values": ["pending", "running"]},
+                {"Name": "instance-state-name", "Values": ["running"]},
                 {"Name": "tag:virgo:game", "Values": ["*"]},
             ]
         )
         instances = [i for r in response["Reservations"] for i in r["Instances"]]
-        msg = "\n".join(map(_instance_format_for_listing, instances))
+        status_res = await ec2.describe_instance_status(
+            InstanceIds=[i["InstanceId"] for i in instances]
+        )
+        statuses = {s["InstanceId"]: s for s in status_res["InstanceStatuses"]}
+        msg = "\n".join(
+            _instance_format_for_listing(i, statuses.get(i["InstanceId"]))
+            for i in instances
+        )
         if msg:
             await ctx.send(f"```{msg}```")
 
 
-def _instance_format_for_listing(instance) -> str:
+def _instance_format_for_listing(instance, status) -> str:
     _id = instance["InstanceId"]
     ip_addr = instance.get("PublicIpAddress", "pending")
-    return f"{_instance_get_game(instance)}-{_id}: {ip_addr}"
+    result = f"{_instance_get_game(instance)}-{_id}: {ip_addr}"
+    if status:
+        status_mode = status["InstanceStatus"]["Status"]
+        if status_mode != "ok":
+            result += f" ({status_mode})"
+    return result
 
 
 def _instance_get_game(instance) -> str:
