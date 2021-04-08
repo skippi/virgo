@@ -37,6 +37,41 @@ async def _fetch_modes_ec2() -> List[Mode]:
         return [Mode(name=t["LaunchTemplateName"]) for t in res["LaunchTemplates"]]
 
 
+class Game(NamedTuple):
+    id_: str
+    ip_address: str
+    mode: str
+    status: str
+
+
+async def _fetch_games_ec2() -> List[Game]:
+    async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
+        response = await ec2.describe_instances(
+            Filters=[
+                {"Name": "instance-state-name", "Values": ["running"]},
+                {"Name": "tag:virgo:game", "Values": ["*"]},
+            ]
+        )
+        instances = [i for r in response["Reservations"] for i in r["Instances"]]
+        status_res = await ec2.describe_instance_status(
+            InstanceIds=[i["InstanceId"] for i in instances]
+        )
+        statuses = {s["InstanceId"]: s for s in status_res["InstanceStatuses"]}
+        result = []
+        for i in instances:
+            ec2_status = statuses.get(i["InstanceId"])
+            game = Game(
+                id_=i["InstanceId"],
+                ip_address=i["PublicIpAddress"],
+                mode=next(
+                    (t["Value"] for t in i["Tags"] if t["Key"] == "virgo:game"), ""
+                ),
+                status=ec2_status["InstanceStatus"]["Status"] if ec2_status else "ok",
+            )
+            result.append(game)
+        return result
+
+
 @BOT.event
 async def on_command_completion(ctx: commands.Context) -> None:
     await ctx.message.add_reaction("✅")
@@ -91,39 +126,14 @@ async def game_create_command(ctx: commands.Context, name: str) -> None:
 @game_group.command(name="list")
 async def game_list_command(ctx: commands.Context) -> None:
     """List game instances."""
-    async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
-        response = await ec2.describe_instances(
-            Filters=[
-                {"Name": "instance-state-name", "Values": ["running"]},
-                {"Name": "tag:virgo:game", "Values": ["*"]},
-            ]
-        )
-        instances = [i for r in response["Reservations"] for i in r["Instances"]]
-        status_res = await ec2.describe_instance_status(
-            InstanceIds=[i["InstanceId"] for i in instances]
-        )
-        statuses = {s["InstanceId"]: s for s in status_res["InstanceStatuses"]}
-        msg = "\n".join(
-            _instance_format_for_listing(i, statuses.get(i["InstanceId"]))
-            for i in instances
-        )
-        if msg:
-            await ctx.send(f"```{msg}```")
+    games = await _fetch_games_ec2()
+    msg = "\n".join(map(_game_format_inline, games))
+    if msg:
+        await ctx.send(f"```{msg}```")
 
 
-def _instance_format_for_listing(instance, status) -> str:
-    _id = instance["InstanceId"]
-    ip_addr = instance.get("PublicIpAddress", "pending")
-    result = f"{_instance_get_game(instance)}-{_id}: {ip_addr}"
-    if status:
-        status_mode = status["InstanceStatus"]["Status"]
-        if status_mode != "ok":
-            result += f" ({status_mode})"
-    return result
-
-
-def _instance_get_game(instance) -> str:
-    return next((t["Value"] for t in instance["Tags"] if t["Key"] == "virgo:game"), "")
+def _game_format_inline(game) -> str:
+    return f"{game.mode}-{game.id_}: {game.ip_address} ({game.status})"
 
 
 @BOT.group(name="mode")
