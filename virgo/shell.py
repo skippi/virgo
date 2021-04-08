@@ -3,9 +3,11 @@ import sys
 from botocore.exceptions import ClientError
 from botocore.config import Config
 from discord.ext import commands
+from typing import List, NamedTuple
 
 AWS_CONFIG = Config(region_name="us-east-2")
 BOT = commands.Bot(command_prefix="v!")
+
 
 class InvalidGameError(Exception):
     pass
@@ -21,6 +23,18 @@ class ModeNotFoundError(Exception):
 
 class UnknownError(Exception):
     pass
+
+
+class Mode(NamedTuple):
+    name: str = ""
+
+
+async def _fetch_modes_ec2() -> List[Mode]:
+    async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
+        res = await ec2.describe_launch_templates(
+            Filters=[{"Name": "tag:virgo:game", "Values": ["*"]},]
+        )
+        return [Mode(name=t["LaunchTemplateName"]) for t in res["LaunchTemplates"]]
 
 
 @BOT.event
@@ -122,13 +136,10 @@ async def mode_group(ctx: commands.Context) -> None:
 @mode_group.command(name="list")
 async def mode_list_command(ctx: commands.Context) -> None:
     """List game modes."""
-    async with aioboto3.client("ec2", config=AWS_CONFIG) as ec2:
-        response = await ec2.describe_launch_templates(
-            Filters=[{"Name": "tag:virgo:game", "Values": ["*"]},]
-        )
-        msg = "\n".join(t["LaunchTemplateName"] for t in response["LaunchTemplates"])
-        if msg:
-            await ctx.send(f"```{msg}```")
+    modes = await _fetch_modes_ec2()
+    msg = "\n".join(m.name for m in modes)
+    if msg:
+        await ctx.send(f"```{msg}```")
 
 
 @game_group.command(name="kill")
